@@ -1,5 +1,5 @@
 {
-  "name": "Euro Münzen Paar-Spiel",
+  "name": "Euro Münzen Paare",
   "short_name": "EuroMuenzen",
   "start_url": "./index.html",
   "display": "standalone",
@@ -7,19 +7,19 @@
   "theme_color": "#f59e0b",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "muenzen/euro-muenzen-1-euro-2007-highResolution.jpg",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/jpeg"
     },
     {
-      "src": "icon-512.png",
+      "src": "muenzen/euro-muenzen-1-euro-2007-highResolution.jpg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/jpeg"
     },
     {
-      "src": "icon-512.png",
+      "src": "muenzen/euro-muenzen-1-euro-2007-highResolution.jpg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "maskable"
     }
   ]
