@@ -34,6 +34,7 @@ function initGame() {
     card.classList.remove('fade-out', 'selected', 'drop-target');
     card.style.transform = '';
     card.style.pointerEvents = 'auto';
+    card.style.visibility = 'visible';
   });
 
   generateTask();
@@ -95,7 +96,6 @@ function attachEvents() {
 }
 
 function handlePointerDown(e) {
-  // Falls bereits ein Drag aktiv ist, alles andere blockieren
   if (isDragging || activeDragCard !== null) {
     e.preventDefault();
     e.stopPropagation();
@@ -107,11 +107,12 @@ function handlePointerDown(e) {
   isDragging = true;
 
   const cardRect = activeDragCard.getBoundingClientRect();
-
   touchStartX = e.clientX;
   touchStartY = e.clientY;
 
-  // Alle anderen Karten deaktivieren
+  activeDragCard.style.pointerEvents = 'none';
+  activeDragCard.style.visibility = 'hidden';
+
   const cards = document.querySelectorAll('.card');
   cards.forEach((card) => {
     if (card !== activeDragCard) {
@@ -126,6 +127,7 @@ function handlePointerDown(e) {
   dragClone.style.height = `${cardRect.height}px`;
   dragClone.style.left = `${cardRect.left}px`;
   dragClone.style.top = `${cardRect.top}px`;
+  dragClone.style.pointerEvents = 'none';
   document.body.appendChild(dragClone);
 
   window.addEventListener('pointermove', handlePointerMove);
@@ -134,7 +136,6 @@ function handlePointerDown(e) {
 }
 
 function handlePointerMove(e) {
-  // Nur den aktiven Pointer verarbeiten
   if (!activeDragCard || !dragClone || e.pointerId !== activeDragPointerId) {
     e.preventDefault();
     e.stopPropagation();
@@ -143,66 +144,42 @@ function handlePointerMove(e) {
 
   const deltaX = e.clientX - touchStartX;
   const deltaY = e.clientY - touchStartY;
-
   dragClone.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.05)`;
 
   const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
   const targetCard = elementBelow ? elementBelow.closest('.card') : null;
 
   document.querySelectorAll('.card').forEach((card) => card.classList.remove('drop-target'));
-  if (targetCard && targetCard !== activeDragCard) {
+  if (targetCard && targetCard !== activeDragCard && targetCard !== dragClone) {
     targetCard.classList.add('drop-target');
   }
 }
 
 function handlePointerUp(e) {
-  // Nur den aktiven Pointer verarbeiten
   if (!activeDragCard || !dragClone || e.pointerId !== activeDragPointerId) {
     e.preventDefault();
     e.stopPropagation();
     return;
   }
 
-  window.removeEventListener('pointermove', handlePointerMove);
-  window.removeEventListener('pointerup', handlePointerUp);
-  window.removeEventListener('pointercancel', handlePointerCancel);
-
-  const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
-  const targetCard = elementBelow ? elementBelow.closest('.card') : null;
-
-  dragClone.remove();
-  dragClone = null;
-
-  document.querySelectorAll('.card').forEach((card) => card.classList.remove('drop-target'));
-
-  const fromIndex = Number(activeDragCard.dataset.index);
-  const moveDist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
-
-  if (targetCard && targetCard !== activeDragCard && moveDist > 10) {
-    const toIndex = Number(targetCard.dataset.index);
-    checkMatch(fromIndex, toIndex);
-  } else if (moveDist <= 10) {
-    handleTap(activeDragCard);
-  }
-
-  // Alle Karten wieder aktivieren
-  const cards = document.querySelectorAll('.card');
-  cards.forEach((card) => {
-    card.style.pointerEvents = 'auto';
-  });
-
-  activeDragCard = null;
-  activeDragPointerId = null;
-  isDragging = false;
+  finishDrag(e, true);
 }
 
 function handlePointerCancel(e) {
-  // Auch bei Abbruch alles zurücksetzen
-  if (e.pointerId !== activeDragPointerId) return;
+  if (!activeDragCard || e.pointerId !== activeDragPointerId) return;
+  finishDrag(e, false);
+}
 
+function finishDrag(e, evaluateDrop) {
   window.removeEventListener('pointermove', handlePointerMove);
   window.removeEventListener('pointerup', handlePointerUp);
   window.removeEventListener('pointercancel', handlePointerCancel);
+
+  let targetCard = null;
+  if (evaluateDrop) {
+    const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+    targetCard = elementBelow ? elementBelow.closest('.card') : null;
+  }
 
   if (dragClone) {
     dragClone.remove();
@@ -213,6 +190,22 @@ function handlePointerCancel(e) {
     card.classList.remove('drop-target');
     card.style.pointerEvents = 'auto';
   });
+
+  const draggedCard = activeDragCard;
+  if (draggedCard) {
+    draggedCard.style.pointerEvents = 'auto';
+    draggedCard.style.visibility = 'visible';
+  }
+
+  const fromIndex = Number(draggedCard.dataset.index);
+  const moveDist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
+
+  if (evaluateDrop && targetCard && targetCard !== draggedCard && targetCard !== dragClone && moveDist > 10) {
+    const toIndex = Number(targetCard.dataset.index);
+    checkMatch(fromIndex, toIndex);
+  } else if (evaluateDrop && moveDist <= 10) {
+    handleTap(draggedCard);
+  }
 
   activeDragCard = null;
   activeDragPointerId = null;
@@ -238,6 +231,10 @@ function handleTap(card) {
 }
 
 function checkMatch(index1, index2) {
+  if (index1 === index2) {
+    return;
+  }
+
   const value1 = currentCardsData[index1];
   const value2 = currentCardsData[index2];
 
