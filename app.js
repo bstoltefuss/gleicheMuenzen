@@ -1,5 +1,16 @@
 const COIN_VALUES = [0.01, 0.02, 0.05, 0.10, 0.20, 0.50, 1.00, 2.00];
 
+const COIN_IMAGES = {
+  0.01: 'muenzen/euro-muenzen-1-cent-2007-highResolution.jpg',
+  0.02: 'muenzen/euro-muenzen-2-cent-2007-highResolution.jpg',
+  0.05: 'muenzen/euro-muenzen-5-cent-2007-highResolution.jpg',
+  0.10: 'muenzen/euro-muenzen-10-cent-2007-highResolution.jpg',
+  0.20: 'muenzen/euro-muenzen-20-cent-2007-highResolution.jpg',
+  0.50: 'muenzen/euro-muenzen-50-cent-2007-highResolution.jpg',
+  1.00: 'muenzen/euro-muenzen-1-euro-2007-highResolution.jpg',
+  2.00: 'muenzen/euro-muenzen-2-euro-2007-highResolution.jpg'
+};
+
 let currentCardsData = [];
 let selectedCardIndex = null;
 
@@ -13,60 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function normalizeValue(value) {
   return Number(value.toFixed(2));
-}
-
-function formatCoinValue(value) {
-  const normalized = normalizeValue(value);
-  if (normalized < 1) {
-    return `${Math.round(normalized * 100)}c`;
-  }
-  return `${normalized.toFixed(0)}€`;
-}
-
-function getCoinStyle(value) {
-  const normalized = normalizeValue(value);
-
-  if (normalized === 0.01 || normalized === 0.02 || normalized === 0.05) {
-    return {
-      name: 'Cent',
-      outer: '#c78546',
-      inner: '#d9a66a',
-      rim: '#8b5e34',
-      text: '#774321',
-      edge: '#f5d4a7'
-    };
-  }
-
-  if (normalized === 0.10 || normalized === 0.20 || normalized === 0.50) {
-    return {
-      name: 'Silber',
-      outer: '#c9ced6',
-      inner: '#edf1f5',
-      rim: '#69727d',
-      text: '#3b4653',
-      edge: '#ffffff'
-    };
-  }
-
-  if (normalized === 1.00) {
-    return {
-      name: 'Euro',
-      outer: '#f7d24c',
-      inner: '#fff2a8',
-      rim: '#a97c00',
-      text: '#7d5a00',
-      edge: '#fff9d8'
-    };
-  }
-
-  return {
-    name: 'Zwei-Euro',
-    outer: '#d9dfe6',
-    inner: '#f0f4f9',
-    rim: '#626d7b',
-    text: '#434d59',
-    edge: '#ffffff'
-  };
 }
 
 function initGame() {
@@ -105,49 +62,23 @@ function shuffleArray(array) {
   }
 }
 
-function createCoinSVG(value) {
+function createCoinImage(value) {
   const normalizedValue = normalizeValue(value);
-  const style = getCoinStyle(normalizedValue);
-  const displayValue = formatCoinValue(normalizedValue);
-  const gradientId = `coin-gradient-${Math.random().toString(36).slice(2, 9)}`;
+  const imagePath = COIN_IMAGES[normalizedValue];
 
-  return `
-    <svg class="coin-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" aria-label="Münze ${displayValue}">
-      <defs>
-        <radialGradient id="${gradientId}" cx="35%" cy="30%" r="75%">
-          <stop offset="0%" stop-color="${style.inner}" />
-          <stop offset="45%" stop-color="${style.outer}" />
-          <stop offset="100%" stop-color="${style.rim}" />
-        </radialGradient>
-      </defs>
+  if (!imagePath) {
+    console.warn(`Kein Bild für Münzwert ${normalizedValue} gefunden`);
+    return `<div class="coin-placeholder">€${normalizedValue.toFixed(2)}</div>`;
+  }
 
-      <circle cx="110" cy="110" r="92" fill="url(#${gradientId})" stroke="${style.edge}" stroke-width="10" />
-      <circle cx="110" cy="110" r="70" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="6" />
-      <circle cx="110" cy="110" r="54" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="4" />
-
-      <g opacity="0.22">
-        ${Array.from({ length: 18 }, (_, index) => {
-          const angle = (index / 18) * Math.PI * 2;
-          const x1 = 110 + Math.cos(angle) * 72;
-          const y1 = 110 + Math.sin(angle) * 72;
-          const x2 = 110 + Math.cos(angle) * 82;
-          const y2 = 110 + Math.sin(angle) * 82;
-          return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,0.9)" stroke-width="3" stroke-linecap="round" />`;
-        }).join('')}
-      </g>
-
-      <circle cx="110" cy="110" r="28" fill="rgba(255,255,255,0.18)" />
-      <text x="110" y="122" text-anchor="middle" font-size="32" font-weight="700" fill="${style.text}" font-family="Arial, sans-serif">${displayValue}</text>
-      <text x="110" y="153" text-anchor="middle" font-size="13" font-weight="600" letter-spacing="2" fill="${style.text}" font-family="Arial, sans-serif">EURO</text>
-    </svg>
-  `;
+  return `<img src="${imagePath}" alt="${normalizedValue} Euro Münze" class="coin-image" />`;
 }
 
 function renderCards() {
   const cards = document.querySelectorAll('.card');
   cards.forEach((card, index) => {
     const value = currentCardsData[index];
-    card.innerHTML = createCoinSVG(value);
+    card.innerHTML = createCoinImage(value);
   });
 }
 
