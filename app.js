@@ -95,6 +95,17 @@ function attachEvents() {
   });
 }
 
+function getCardAtPosition(x, y) {
+  const cards = document.querySelectorAll('.card');
+  for (const card of cards) {
+    const rect = card.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+      return card;
+    }
+  }
+  return null;
+}
+
 function handlePointerDown(e) {
   if (isDragging || activeDragCard !== null) {
     e.preventDefault();
@@ -146,11 +157,10 @@ function handlePointerMove(e) {
   const deltaY = e.clientY - touchStartY;
   dragClone.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.05)`;
 
-  const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
-  const targetCard = elementBelow ? elementBelow.closest('.card') : null;
+  const targetCard = getCardAtPosition(e.clientX, e.clientY);
 
   document.querySelectorAll('.card').forEach((card) => card.classList.remove('drop-target'));
-  if (targetCard && targetCard !== activeDragCard && targetCard !== dragClone) {
+  if (targetCard && targetCard !== activeDragCard) {
     targetCard.classList.add('drop-target');
   }
 }
@@ -177,8 +187,7 @@ function finishDrag(e, evaluateDrop) {
 
   let targetCard = null;
   if (evaluateDrop) {
-    const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
-    targetCard = elementBelow ? elementBelow.closest('.card') : null;
+    targetCard = getCardAtPosition(e.clientX, e.clientY);
   }
 
   if (dragClone) {
@@ -200,7 +209,7 @@ function finishDrag(e, evaluateDrop) {
   const fromIndex = Number(draggedCard.dataset.index);
   const moveDist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
 
-  if (evaluateDrop && targetCard && targetCard !== draggedCard && targetCard !== dragClone && moveDist > 10) {
+  if (evaluateDrop && targetCard && targetCard !== draggedCard && moveDist > 10) {
     const toIndex = Number(targetCard.dataset.index);
     checkMatch(fromIndex, toIndex);
   } else if (evaluateDrop && moveDist <= 10) {
