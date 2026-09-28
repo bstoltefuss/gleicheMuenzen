@@ -1,33 +1,39 @@
-const COLORS = {
-  red: '#EF4444',
-  yellow: '#EAB308',
-  blue: '#3B82F6'
-};
-const COLOR_KEYS = ['red', 'yellow', 'blue'];
+const COIN_VALUES = [0.01, 0.02, 0.05, 0.10, 0.20, 0.50, 1.00, 2.00];
 
-const ALL_COMBINATIONS = [];
-for (let i = 0; i < COLOR_KEYS.length; i++) {
-  for (let j = i; j < COLOR_KEYS.length; j++) {
-    ALL_COMBINATIONS.push([COLOR_KEYS[i], COLOR_KEYS[j]]);
-  }
-}
+const COIN_IMAGES = {
+  0.01: 'muenzen/euro-muenzen-1-cent-2007-highResolution.jpg',
+  0.02: 'muenzen/euro-muenzen-2-cent-2007-highResolution.jpg',
+  0.05: 'muenzen/euro-muenzen-5-cent-2007-highResolution.jpg',
+  0.10: 'muenzen/euro-muenzen-10-cent-2007-highResolution.jpg',
+  0.20: 'muenzen/euro-muenzen-20-cent-2007-highResolution.jpg',
+  0.50: 'muenzen/euro-muenzen-50-cent-2007-highResolution.jpg',
+  1.00: 'muenzen/euro-muenzen-1-euro-2007-highResolution.jpg',
+  2.00: 'muenzen/euro-muenzen-2-euro-2007-highResolution.jpg'
+};
 
 let currentCardsData = [];
 let selectedCardIndex = null;
 
 let activeDragCard = null;
+let activeDragPointerId = null;
 let dragClone = null;
 let touchStartX = 0, touchStartY = 0;
+let isDragging = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   initGame();
 });
 
+function normalizeValue(value) {
+  return Number(value.toFixed(2));
+}
+
 function initGame() {
   const cards = document.querySelectorAll('.card');
-  cards.forEach(card => {
+  cards.forEach((card) => {
     card.classList.remove('fade-out', 'selected', 'drop-target');
     card.style.transform = '';
+    card.style.pointerEvents = 'auto';
   });
 
   generateTask();
@@ -36,32 +42,20 @@ function initGame() {
 }
 
 function generateTask() {
-  const matchingPair = ALL_COMBINATIONS[Math.floor(Math.random() * ALL_COMBINATIONS.length)];
+  const matchingValue = COIN_VALUES[Math.floor(Math.random() * COIN_VALUES.length)];
 
-  let remaining = ALL_COMBINATIONS.filter(combo => !areCombosEqual(combo, matchingPair));
-
-  shuffleArray(remaining);
-  const other1 = remaining[0];
-  const other2 = remaining[1];
+  const remaining = COIN_VALUES.filter((value) => normalizeValue(value) !== normalizeValue(matchingValue));
+  const other1 = remaining[Math.floor(Math.random() * remaining.length)];
+  const other2 = remaining.filter((value) => normalizeValue(value) !== normalizeValue(other1))[0];
 
   currentCardsData = [
-    randomizeOrder(matchingPair),
-    randomizeOrder(matchingPair),
-    randomizeOrder(other1),
-    randomizeOrder(other2)
+    matchingValue,
+    matchingValue,
+    other1,
+    other2
   ];
-  
+
   shuffleArray(currentCardsData);
-}
-
-function randomizeOrder(combo) {
-  return Math.random() < 0.5 ? [combo[0], combo[1]] : [combo[1], combo[0]];
-}
-
-function areCombosEqual(comboA, comboB) {
-  const sortedA = [...comboA].sort();
-  const sortedB = [...comboB].sort();
-  return sortedA[0] === sortedB[0] && sortedA[1] === sortedB[1];
 }
 
 function shuffleArray(array) {
@@ -71,53 +65,29 @@ function shuffleArray(array) {
   }
 }
 
-function createFlowerSVG(colorKey1, colorKey2) {
-  const hex1 = COLORS[colorKey1];
-  const hex2 = COLORS[colorKey2];
+function createCoinImage(value) {
+  const normalizedValue = normalizeValue(value);
+  const imagePath = COIN_IMAGES[normalizedValue];
 
-  function getPetalsPath(cx, cy, rx, ry, hexColor) {
-    let petals = '';
-    const offset = 22;
-    for (let i = 0; i < 5; i++) {
-      const angleDeg = i * 72 - 90;
-      const rad = angleDeg * (Math.PI / 180);
-      const px = cx + offset * Math.cos(rad);
-      const py = cy + offset * Math.sin(rad);
-
-      petals += `<ellipse cx="${px}" cy="${py}" rx="${rx}" ry="${ry}" fill="${hexColor}" transform="rotate(${angleDeg + 90}, ${px}, ${py})" />`;
-    }
-    return petals;
+  if (!imagePath) {
+    console.warn(`Kein Bild für Münzwert ${normalizedValue} gefunden`);
+    return `<div class="coin-placeholder">€${normalizedValue.toFixed(2)}</div>`;
   }
 
-  return `
-    <svg class="flower-svg" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
-      <path d="M 55 60 Q 70 140 100 205" stroke="#10B981" stroke-width="10" fill="none" stroke-linecap="round"/>
-      <path d="M 145 60 Q 130 140 100 205" stroke="#10B981" stroke-width="10" fill="none" stroke-linecap="round"/>
-
-      <g>
-        ${getPetalsPath(55, 60, 10, 20, hex1)}
-        <circle cx="55" cy="60" r="14" fill="${hex1}" />
-      </g>
-
-      <g>
-        ${getPetalsPath(145, 60, 10, 20, hex2)}
-        <circle cx="145" cy="60" r="14" fill="${hex2}" />
-      </g>
-    </svg>
-  `;
+  return `<img src="${imagePath}" alt="${normalizedValue} Euro Münze" class="coin-image" />`;
 }
 
 function renderCards() {
   const cards = document.querySelectorAll('.card');
   cards.forEach((card, index) => {
-    const combo = currentCardsData[index];
-    card.innerHTML = createFlowerSVG(combo[0], combo[1]);
+    const value = currentCardsData[index];
+    card.innerHTML = createCoinImage(value);
   });
 }
 
 function attachEvents() {
   const cards = document.querySelectorAll('.card');
-  cards.forEach(card => {
+  cards.forEach((card) => {
     const newCard = card.cloneNode(true);
     card.parentNode.replaceChild(newCard, card);
     newCard.addEventListener('pointerdown', handlePointerDown);
@@ -125,11 +95,29 @@ function attachEvents() {
 }
 
 function handlePointerDown(e) {
+  // Falls bereits ein Drag aktiv ist, alles andere blockieren
+  if (isDragging || activeDragCard !== null) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
+
   activeDragCard = e.currentTarget;
+  activeDragPointerId = e.pointerId;
+  isDragging = true;
+
   const cardRect = activeDragCard.getBoundingClientRect();
 
   touchStartX = e.clientX;
   touchStartY = e.clientY;
+
+  // Alle anderen Karten deaktivieren
+  const cards = document.querySelectorAll('.card');
+  cards.forEach((card) => {
+    if (card !== activeDragCard) {
+      card.style.pointerEvents = 'none';
+    }
+  });
 
   dragClone = activeDragCard.cloneNode(true);
   dragClone.classList.add('dragging');
@@ -142,10 +130,16 @@ function handlePointerDown(e) {
 
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerUp);
+  window.addEventListener('pointercancel', handlePointerCancel);
 }
 
 function handlePointerMove(e) {
-  if (!activeDragCard || !dragClone) return;
+  // Nur den aktiven Pointer verarbeiten
+  if (!activeDragCard || !dragClone || e.pointerId !== activeDragPointerId) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
 
   const deltaX = e.clientX - touchStartX;
   const deltaY = e.clientY - touchStartY;
@@ -155,17 +149,23 @@ function handlePointerMove(e) {
   const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
   const targetCard = elementBelow ? elementBelow.closest('.card') : null;
 
-  document.querySelectorAll('.card').forEach(c => c.classList.remove('drop-target'));
+  document.querySelectorAll('.card').forEach((card) => card.classList.remove('drop-target'));
   if (targetCard && targetCard !== activeDragCard) {
     targetCard.classList.add('drop-target');
   }
 }
 
 function handlePointerUp(e) {
-  if (!activeDragCard || !dragClone) return;
+  // Nur den aktiven Pointer verarbeiten
+  if (!activeDragCard || !dragClone || e.pointerId !== activeDragPointerId) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
 
   window.removeEventListener('pointermove', handlePointerMove);
   window.removeEventListener('pointerup', handlePointerUp);
+  window.removeEventListener('pointercancel', handlePointerCancel);
 
   const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
   const targetCard = elementBelow ? elementBelow.closest('.card') : null;
@@ -173,23 +173,54 @@ function handlePointerUp(e) {
   dragClone.remove();
   dragClone = null;
 
-  document.querySelectorAll('.card').forEach(c => c.classList.remove('drop-target'));
+  document.querySelectorAll('.card').forEach((card) => card.classList.remove('drop-target'));
 
-  const fromIndex = parseInt(activeDragCard.dataset.index);
+  const fromIndex = Number(activeDragCard.dataset.index);
   const moveDist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
 
   if (targetCard && targetCard !== activeDragCard && moveDist > 10) {
-    const toIndex = parseInt(targetCard.dataset.index);
+    const toIndex = Number(targetCard.dataset.index);
     checkMatch(fromIndex, toIndex);
   } else if (moveDist <= 10) {
     handleTap(activeDragCard);
   }
 
+  // Alle Karten wieder aktivieren
+  const cards = document.querySelectorAll('.card');
+  cards.forEach((card) => {
+    card.style.pointerEvents = 'auto';
+  });
+
   activeDragCard = null;
+  activeDragPointerId = null;
+  isDragging = false;
+}
+
+function handlePointerCancel(e) {
+  // Auch bei Abbruch alles zurücksetzen
+  if (e.pointerId !== activeDragPointerId) return;
+
+  window.removeEventListener('pointermove', handlePointerMove);
+  window.removeEventListener('pointerup', handlePointerUp);
+  window.removeEventListener('pointercancel', handlePointerCancel);
+
+  if (dragClone) {
+    dragClone.remove();
+    dragClone = null;
+  }
+
+  document.querySelectorAll('.card').forEach((card) => {
+    card.classList.remove('drop-target');
+    card.style.pointerEvents = 'auto';
+  });
+
+  activeDragCard = null;
+  activeDragPointerId = null;
+  isDragging = false;
 }
 
 function handleTap(card) {
-  const index = parseInt(card.dataset.index);
+  const index = Number(card.dataset.index);
 
   if (selectedCardIndex === null) {
     selectedCardIndex = index;
@@ -200,17 +231,17 @@ function handleTap(card) {
   } else {
     const firstCard = document.querySelector(`.card[data-index="${selectedCardIndex}"]`);
     if (firstCard) firstCard.classList.remove('selected');
-    
+
     checkMatch(selectedCardIndex, index);
     selectedCardIndex = null;
   }
 }
 
 function checkMatch(index1, index2) {
-  const combo1 = currentCardsData[index1];
-  const combo2 = currentCardsData[index2];
+  const value1 = currentCardsData[index1];
+  const value2 = currentCardsData[index2];
 
-  const isMatch = areCombosEqual(combo1, combo2);
+  const isMatch = normalizeValue(value1) === normalizeValue(value2);
 
   if (isMatch) {
     showSuccessFeedback();
@@ -229,12 +260,12 @@ function showSuccessFeedback() {
   const cards = document.querySelectorAll('.card');
   const rainContainer = document.getElementById('stars-rain-container');
 
-  cards.forEach(card => card.classList.add('fade-out'));
+  cards.forEach((card) => card.classList.add('fade-out'));
 
   rainContainer.innerHTML = '';
   rainContainer.classList.remove('hidden');
 
-  const starIcons = ['⭐', '🌟', '✨'];
+  const starIcons = ['⭐', '✨', '🌟'];
   for (let i = 0; i < 35; i++) {
     const star = document.createElement('div');
     star.className = 'falling-star';

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blumen-pwa-v1';
+const CACHE_NAME = 'euro-muenzen-pwa-v1';
 const ASSETS = [
   './',
   './index.html',
