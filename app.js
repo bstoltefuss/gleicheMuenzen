@@ -15,6 +15,7 @@ let currentCardsData = [];
 let selectedCardIndex = null;
 
 let activeDragCard = null;
+let activeDragPointerId = null;
 let dragClone = null;
 let touchStartX = 0, touchStartY = 0;
 
@@ -92,7 +93,14 @@ function attachEvents() {
 }
 
 function handlePointerDown(e) {
+  // Nur den ersten Pointer akzeptieren, alle anderen ignorieren
+  if (activeDragCard !== null) {
+    e.preventDefault();
+    return;
+  }
+
   activeDragCard = e.currentTarget;
+  activeDragPointerId = e.pointerId;
   const cardRect = activeDragCard.getBoundingClientRect();
 
   touchStartX = e.clientX;
@@ -112,7 +120,8 @@ function handlePointerDown(e) {
 }
 
 function handlePointerMove(e) {
-  if (!activeDragCard || !dragClone) return;
+  // Nur den aktiven Pointer verarbeiten
+  if (!activeDragCard || !dragClone || e.pointerId !== activeDragPointerId) return;
 
   const deltaX = e.clientX - touchStartX;
   const deltaY = e.clientY - touchStartY;
@@ -129,7 +138,8 @@ function handlePointerMove(e) {
 }
 
 function handlePointerUp(e) {
-  if (!activeDragCard || !dragClone) return;
+  // Nur den aktiven Pointer verarbeiten
+  if (!activeDragCard || !dragClone || e.pointerId !== activeDragPointerId) return;
 
   window.removeEventListener('pointermove', handlePointerMove);
   window.removeEventListener('pointerup', handlePointerUp);
@@ -153,6 +163,7 @@ function handlePointerUp(e) {
   }
 
   activeDragCard = null;
+  activeDragPointerId = null;
 }
 
 function handleTap(card) {
