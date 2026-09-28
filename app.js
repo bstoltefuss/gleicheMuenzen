@@ -18,6 +18,7 @@ let activeDragCard = null;
 let activeDragPointerId = null;
 let dragClone = null;
 let touchStartX = 0, touchStartY = 0;
+let isDragging = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   initGame();
@@ -32,6 +33,7 @@ function initGame() {
   cards.forEach((card) => {
     card.classList.remove('fade-out', 'selected', 'drop-target');
     card.style.transform = '';
+    card.style.pointerEvents = 'auto';
   });
 
   generateTask();
@@ -93,18 +95,29 @@ function attachEvents() {
 }
 
 function handlePointerDown(e) {
-  // Nur den ersten Pointer akzeptieren, alle anderen ignorieren
-  if (activeDragCard !== null) {
+  // Falls bereits ein Drag aktiv ist, alles andere blockieren
+  if (isDragging || activeDragCard !== null) {
     e.preventDefault();
+    e.stopPropagation();
     return;
   }
 
   activeDragCard = e.currentTarget;
   activeDragPointerId = e.pointerId;
+  isDragging = true;
+
   const cardRect = activeDragCard.getBoundingClientRect();
 
   touchStartX = e.clientX;
   touchStartY = e.clientY;
+
+  // Alle anderen Karten deaktivieren
+  const cards = document.querySelectorAll('.card');
+  cards.forEach((card) => {
+    if (card !== activeDragCard) {
+      card.style.pointerEvents = 'none';
+    }
+  });
 
   dragClone = activeDragCard.cloneNode(true);
   dragClone.classList.add('dragging');
@@ -117,11 +130,16 @@ function handlePointerDown(e) {
 
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', handlePointerUp);
+  window.addEventListener('pointercancel', handlePointerCancel);
 }
 
 function handlePointerMove(e) {
   // Nur den aktiven Pointer verarbeiten
-  if (!activeDragCard || !dragClone || e.pointerId !== activeDragPointerId) return;
+  if (!activeDragCard || !dragClone || e.pointerId !== activeDragPointerId) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
 
   const deltaX = e.clientX - touchStartX;
   const deltaY = e.clientY - touchStartY;
@@ -139,10 +157,15 @@ function handlePointerMove(e) {
 
 function handlePointerUp(e) {
   // Nur den aktiven Pointer verarbeiten
-  if (!activeDragCard || !dragClone || e.pointerId !== activeDragPointerId) return;
+  if (!activeDragCard || !dragClone || e.pointerId !== activeDragPointerId) {
+    e.preventDefault();
+    e.stopPropagation();
+    return;
+  }
 
   window.removeEventListener('pointermove', handlePointerMove);
   window.removeEventListener('pointerup', handlePointerUp);
+  window.removeEventListener('pointercancel', handlePointerCancel);
 
   const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
   const targetCard = elementBelow ? elementBelow.closest('.card') : null;
@@ -162,8 +185,38 @@ function handlePointerUp(e) {
     handleTap(activeDragCard);
   }
 
+  // Alle Karten wieder aktivieren
+  const cards = document.querySelectorAll('.card');
+  cards.forEach((card) => {
+    card.style.pointerEvents = 'auto';
+  });
+
   activeDragCard = null;
   activeDragPointerId = null;
+  isDragging = false;
+}
+
+function handlePointerCancel(e) {
+  // Auch bei Abbruch alles zurücksetzen
+  if (e.pointerId !== activeDragPointerId) return;
+
+  window.removeEventListener('pointermove', handlePointerMove);
+  window.removeEventListener('pointerup', handlePointerUp);
+  window.removeEventListener('pointercancel', handlePointerCancel);
+
+  if (dragClone) {
+    dragClone.remove();
+    dragClone = null;
+  }
+
+  document.querySelectorAll('.card').forEach((card) => {
+    card.classList.remove('drop-target');
+    card.style.pointerEvents = 'auto';
+  });
+
+  activeDragCard = null;
+  activeDragPointerId = null;
+  isDragging = false;
 }
 
 function handleTap(card) {
