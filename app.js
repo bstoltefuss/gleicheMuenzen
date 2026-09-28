@@ -1,16 +1,4 @@
-const COLORS = {
-  red: '#EF4444',
-  yellow: '#EAB308',
-  blue: '#3B82F6'
-};
-const COLOR_KEYS = ['red', 'yellow', 'blue'];
-
-const ALL_COMBINATIONS = [];
-for (let i = 0; i < COLOR_KEYS.length; i++) {
-  for (let j = i; j < COLOR_KEYS.length; j++) {
-    ALL_COMBINATIONS.push([COLOR_KEYS[i], COLOR_KEYS[j]]);
-  }
-}
+const COIN_VALUES = [0.01, 0.02, 0.05, 0.10, 0.20, 0.50, 1.00, 2.00];
 
 let currentCardsData = [];
 let selectedCardIndex = null;
@@ -23,9 +11,67 @@ document.addEventListener('DOMContentLoaded', () => {
   initGame();
 });
 
+function normalizeValue(value) {
+  return Number(value.toFixed(2));
+}
+
+function formatCoinValue(value) {
+  const normalized = normalizeValue(value);
+  if (normalized < 1) {
+    return `${Math.round(normalized * 100)}c`;
+  }
+  return `${normalized.toFixed(0)}€`;
+}
+
+function getCoinStyle(value) {
+  const normalized = normalizeValue(value);
+
+  if (normalized === 0.01 || normalized === 0.02 || normalized === 0.05) {
+    return {
+      name: 'Cent',
+      outer: '#c78546',
+      inner: '#d9a66a',
+      rim: '#8b5e34',
+      text: '#774321',
+      edge: '#f5d4a7'
+    };
+  }
+
+  if (normalized === 0.10 || normalized === 0.20 || normalized === 0.50) {
+    return {
+      name: 'Silber',
+      outer: '#c9ced6',
+      inner: '#edf1f5',
+      rim: '#69727d',
+      text: '#3b4653',
+      edge: '#ffffff'
+    };
+  }
+
+  if (normalized === 1.00) {
+    return {
+      name: 'Euro',
+      outer: '#f7d24c',
+      inner: '#fff2a8',
+      rim: '#a97c00',
+      text: '#7d5a00',
+      edge: '#fff9d8'
+    };
+  }
+
+  return {
+    name: 'Zwei-Euro',
+    outer: '#d9dfe6',
+    inner: '#f0f4f9',
+    rim: '#626d7b',
+    text: '#434d59',
+    edge: '#ffffff'
+  };
+}
+
 function initGame() {
   const cards = document.querySelectorAll('.card');
-  cards.forEach(card => {
+  cards.forEach((card) => {
     card.classList.remove('fade-out', 'selected', 'drop-target');
     card.style.transform = '';
   });
@@ -36,32 +82,20 @@ function initGame() {
 }
 
 function generateTask() {
-  const matchingPair = ALL_COMBINATIONS[Math.floor(Math.random() * ALL_COMBINATIONS.length)];
+  const matchingValue = COIN_VALUES[Math.floor(Math.random() * COIN_VALUES.length)];
 
-  let remaining = ALL_COMBINATIONS.filter(combo => !areCombosEqual(combo, matchingPair));
-
-  shuffleArray(remaining);
-  const other1 = remaining[0];
-  const other2 = remaining[1];
+  const remaining = COIN_VALUES.filter((value) => normalizeValue(value) !== normalizeValue(matchingValue));
+  const other1 = remaining[Math.floor(Math.random() * remaining.length)];
+  const other2 = remaining.filter((value) => normalizeValue(value) !== normalizeValue(other1))[0];
 
   currentCardsData = [
-    randomizeOrder(matchingPair),
-    randomizeOrder(matchingPair),
-    randomizeOrder(other1),
-    randomizeOrder(other2)
+    matchingValue,
+    matchingValue,
+    other1,
+    other2
   ];
-  
+
   shuffleArray(currentCardsData);
-}
-
-function randomizeOrder(combo) {
-  return Math.random() < 0.5 ? [combo[0], combo[1]] : [combo[1], combo[0]];
-}
-
-function areCombosEqual(comboA, comboB) {
-  const sortedA = [...comboA].sort();
-  const sortedB = [...comboB].sort();
-  return sortedA[0] === sortedB[0] && sortedA[1] === sortedB[1];
 }
 
 function shuffleArray(array) {
@@ -71,38 +105,40 @@ function shuffleArray(array) {
   }
 }
 
-function createFlowerSVG(colorKey1, colorKey2) {
-  const hex1 = COLORS[colorKey1];
-  const hex2 = COLORS[colorKey2];
-
-  function getPetalsPath(cx, cy, rx, ry, hexColor) {
-    let petals = '';
-    const offset = 22;
-    for (let i = 0; i < 5; i++) {
-      const angleDeg = i * 72 - 90;
-      const rad = angleDeg * (Math.PI / 180);
-      const px = cx + offset * Math.cos(rad);
-      const py = cy + offset * Math.sin(rad);
-
-      petals += `<ellipse cx="${px}" cy="${py}" rx="${rx}" ry="${ry}" fill="${hexColor}" transform="rotate(${angleDeg + 90}, ${px}, ${py})" />`;
-    }
-    return petals;
-  }
+function createCoinSVG(value) {
+  const normalizedValue = normalizeValue(value);
+  const style = getCoinStyle(normalizedValue);
+  const displayValue = formatCoinValue(normalizedValue);
+  const gradientId = `coin-gradient-${Math.random().toString(36).slice(2, 9)}`;
 
   return `
-    <svg class="flower-svg" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
-      <path d="M 55 60 Q 70 140 100 205" stroke="#10B981" stroke-width="10" fill="none" stroke-linecap="round"/>
-      <path d="M 145 60 Q 130 140 100 205" stroke="#10B981" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <svg class="coin-svg" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" aria-label="Münze ${displayValue}">
+      <defs>
+        <radialGradient id="${gradientId}" cx="35%" cy="30%" r="75%">
+          <stop offset="0%" stop-color="${style.inner}" />
+          <stop offset="45%" stop-color="${style.outer}" />
+          <stop offset="100%" stop-color="${style.rim}" />
+        </radialGradient>
+      </defs>
 
-      <g>
-        ${getPetalsPath(55, 60, 10, 20, hex1)}
-        <circle cx="55" cy="60" r="14" fill="${hex1}" />
+      <circle cx="110" cy="110" r="92" fill="url(#${gradientId})" stroke="${style.edge}" stroke-width="10" />
+      <circle cx="110" cy="110" r="70" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="6" />
+      <circle cx="110" cy="110" r="54" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="4" />
+
+      <g opacity="0.22">
+        ${Array.from({ length: 18 }, (_, index) => {
+          const angle = (index / 18) * Math.PI * 2;
+          const x1 = 110 + Math.cos(angle) * 72;
+          const y1 = 110 + Math.sin(angle) * 72;
+          const x2 = 110 + Math.cos(angle) * 82;
+          const y2 = 110 + Math.sin(angle) * 82;
+          return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,0.9)" stroke-width="3" stroke-linecap="round" />`;
+        }).join('')}
       </g>
 
-      <g>
-        ${getPetalsPath(145, 60, 10, 20, hex2)}
-        <circle cx="145" cy="60" r="14" fill="${hex2}" />
-      </g>
+      <circle cx="110" cy="110" r="28" fill="rgba(255,255,255,0.18)" />
+      <text x="110" y="122" text-anchor="middle" font-size="32" font-weight="700" fill="${style.text}" font-family="Arial, sans-serif">${displayValue}</text>
+      <text x="110" y="153" text-anchor="middle" font-size="13" font-weight="600" letter-spacing="2" fill="${style.text}" font-family="Arial, sans-serif">EURO</text>
     </svg>
   `;
 }
@@ -110,14 +146,14 @@ function createFlowerSVG(colorKey1, colorKey2) {
 function renderCards() {
   const cards = document.querySelectorAll('.card');
   cards.forEach((card, index) => {
-    const combo = currentCardsData[index];
-    card.innerHTML = createFlowerSVG(combo[0], combo[1]);
+    const value = currentCardsData[index];
+    card.innerHTML = createCoinSVG(value);
   });
 }
 
 function attachEvents() {
   const cards = document.querySelectorAll('.card');
-  cards.forEach(card => {
+  cards.forEach((card) => {
     const newCard = card.cloneNode(true);
     card.parentNode.replaceChild(newCard, card);
     newCard.addEventListener('pointerdown', handlePointerDown);
@@ -155,7 +191,7 @@ function handlePointerMove(e) {
   const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
   const targetCard = elementBelow ? elementBelow.closest('.card') : null;
 
-  document.querySelectorAll('.card').forEach(c => c.classList.remove('drop-target'));
+  document.querySelectorAll('.card').forEach((card) => card.classList.remove('drop-target'));
   if (targetCard && targetCard !== activeDragCard) {
     targetCard.classList.add('drop-target');
   }
@@ -173,13 +209,13 @@ function handlePointerUp(e) {
   dragClone.remove();
   dragClone = null;
 
-  document.querySelectorAll('.card').forEach(c => c.classList.remove('drop-target'));
+  document.querySelectorAll('.card').forEach((card) => card.classList.remove('drop-target'));
 
-  const fromIndex = parseInt(activeDragCard.dataset.index);
+  const fromIndex = Number(activeDragCard.dataset.index);
   const moveDist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
 
   if (targetCard && targetCard !== activeDragCard && moveDist > 10) {
-    const toIndex = parseInt(targetCard.dataset.index);
+    const toIndex = Number(targetCard.dataset.index);
     checkMatch(fromIndex, toIndex);
   } else if (moveDist <= 10) {
     handleTap(activeDragCard);
@@ -189,7 +225,7 @@ function handlePointerUp(e) {
 }
 
 function handleTap(card) {
-  const index = parseInt(card.dataset.index);
+  const index = Number(card.dataset.index);
 
   if (selectedCardIndex === null) {
     selectedCardIndex = index;
@@ -200,17 +236,17 @@ function handleTap(card) {
   } else {
     const firstCard = document.querySelector(`.card[data-index="${selectedCardIndex}"]`);
     if (firstCard) firstCard.classList.remove('selected');
-    
+
     checkMatch(selectedCardIndex, index);
     selectedCardIndex = null;
   }
 }
 
 function checkMatch(index1, index2) {
-  const combo1 = currentCardsData[index1];
-  const combo2 = currentCardsData[index2];
+  const value1 = currentCardsData[index1];
+  const value2 = currentCardsData[index2];
 
-  const isMatch = areCombosEqual(combo1, combo2);
+  const isMatch = normalizeValue(value1) === normalizeValue(value2);
 
   if (isMatch) {
     showSuccessFeedback();
@@ -229,12 +265,12 @@ function showSuccessFeedback() {
   const cards = document.querySelectorAll('.card');
   const rainContainer = document.getElementById('stars-rain-container');
 
-  cards.forEach(card => card.classList.add('fade-out'));
+  cards.forEach((card) => card.classList.add('fade-out'));
 
   rainContainer.innerHTML = '';
   rainContainer.classList.remove('hidden');
 
-  const starIcons = ['⭐', '🌟', '✨'];
+  const starIcons = ['⭐', '✨', '🌟'];
   for (let i = 0; i < 35; i++) {
     const star = document.createElement('div');
     star.className = 'falling-star';
