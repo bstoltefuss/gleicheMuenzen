@@ -158,11 +158,6 @@ function handlePointerMove(e) {
   dragClone.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.05)`;
 
   const targetCard = getCardAtPosition(e.clientX, e.clientY);
-
-  document.querySelectorAll('.card').forEach((card) => card.classList.remove('drop-target'));
-  if (targetCard && targetCard !== activeDragCard) {
-    targetCard.classList.add('drop-target');
-  }
 }
 
 function handlePointerUp(e) {
